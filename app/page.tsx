@@ -1,0 +1,240 @@
+'use client';
+
+import React from 'react';
+import { useLocation } from '@/hooks/useLocation';
+import { useWeather } from '@/hooks/useWeather';
+import { useHistory } from '@/hooks/useHistory';
+import { WeatherHeader } from '@/components/dashboard/WeatherHeader';
+import { CurrentWeather } from '@/components/dashboard/CurrentWeather';
+import { WeatherMetrics } from '@/components/dashboard/WeatherMetrics';
+import { HourlyForecast } from '@/components/dashboard/HourlyForecast';
+import { DailyForecast } from '@/components/dashboard/DailyForecast';
+import { TemperatureChart } from '@/components/dashboard/TemperatureChart';
+import { HumidityChart } from '@/components/dashboard/HumidityChart';
+import { PrecipitationChart } from '@/components/dashboard/PrecipitationChart';
+import { WindAnalytics } from '@/components/dashboard/WindAnalytics';
+import { WeatherConditionChart } from '@/components/dashboard/WeatherConditionChart';
+import { WeatherAnalytics } from '@/components/dashboard/WeatherAnalytics';
+import { SunriseSunset } from '@/components/dashboard/SunriseSunset';
+import { WeatherAlerts } from '@/components/dashboard/WeatherAlerts';
+import {
+  CurrentWeatherSkeleton,
+  MetricsSkeleton,
+  HourlyForecastSkeleton,
+  DailyForecastSkeleton,
+  ChartSkeleton,
+  AnalyticsCardsSkeleton,
+} from '@/components/ui/LoadingSkeleton';
+import { ErrorState } from '@/components/ui/ErrorState';
+
+export default function WeatherDashboardPage() {
+  const {
+    locations,
+    selectedLocation,
+    searchResults,
+    isSearching,
+    isGeoLoading,
+    geoError,
+    searchLocations,
+    selectLocation,
+    selectSearchResult,
+    requestCurrentLocation,
+    clearSearchResults,
+  } = useLocation();
+
+  const {
+    weatherData,
+    status,
+    lastUpdated,
+    error: weatherError,
+    isLoading: isWeatherLoading,
+    isRefreshing,
+    refresh: refreshWeather,
+  } = useWeather({
+    location: selectedLocation,
+  });
+
+  const {
+    history,
+    range,
+    setRange,
+    isLoading: isHistoryLoading,
+    error: historyError,
+    refreshHistory,
+  } = useHistory({
+    locationId: selectedLocation?.id || null,
+    initialRange: '24h',
+  });
+
+  return (
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
+      {/* 1. Dashboard Header with Location & Status */}
+      <WeatherHeader
+        locations={locations}
+        selectedLocation={selectedLocation}
+        onSelectLocation={selectLocation}
+        onSelectSearchResult={selectSearchResult}
+        onSearch={searchLocations}
+        searchResults={searchResults}
+        isSearching={isSearching}
+        onRequestGeolocation={requestCurrentLocation}
+        isGeoLoading={isGeoLoading}
+        geoError={geoError}
+        onClearSearch={clearSearchResults}
+        status={status}
+        lastUpdated={lastUpdated}
+        onRefresh={() => {
+          refreshWeather();
+          refreshHistory();
+        }}
+        isRefreshing={isRefreshing}
+      />
+
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        {/* Weather API Error Notification Banner */}
+        {weatherError && !weatherData && (
+          <ErrorState
+            title="Weather Feed Interrupted"
+            message={weatherError}
+            onRetry={refreshWeather}
+          />
+        )}
+
+        {/* Historical Service Notice Banner */}
+        {historyError && !history && (
+          <ErrorState
+            compact
+            title="Historical Data Status"
+            message={historyError}
+            onRetry={refreshHistory}
+          />
+        )}
+
+        {/* 2. Current Weather Card */}
+        {isWeatherLoading && !weatherData ? (
+          <CurrentWeatherSkeleton />
+        ) : weatherData ? (
+          <CurrentWeather
+            current={weatherData.current}
+            todayDaily={weatherData.daily[0]}
+            cityName={selectedLocation?.city}
+            countryName={selectedLocation?.country || undefined}
+          />
+        ) : null}
+
+        {/* 3. Secondary Atmospheric Metrics */}
+        {isWeatherLoading && !weatherData ? (
+          <MetricsSkeleton />
+        ) : weatherData ? (
+          <WeatherMetrics current={weatherData.current} />
+        ) : null}
+
+        {/* 4. Temperature History Chart (Primary Time-Series Visualization) */}
+        {isHistoryLoading && !history ? (
+          <ChartSkeleton height={320} />
+        ) : (
+          <TemperatureChart
+            observations={history?.observations || []}
+            range={range}
+          />
+        )}
+
+        {/* 5. Hourly Forecast (Next 24 Hours) */}
+        {isWeatherLoading && !weatherData ? (
+          <HourlyForecastSkeleton />
+        ) : weatherData ? (
+          <HourlyForecast hourly={weatherData.hourly} />
+        ) : null}
+
+        {/* 6. 7-Day Daily Forecast */}
+        {isWeatherLoading && !weatherData ? (
+          <DailyForecastSkeleton />
+        ) : weatherData ? (
+          <DailyForecast daily={weatherData.daily} />
+        ) : null}
+
+        {/* 7. Historical Analytics Summary & Trend Cards */}
+        {isHistoryLoading && !history ? (
+          <AnalyticsCardsSkeleton />
+        ) : history ? (
+          <WeatherAnalytics
+            analytics={history.analytics}
+            range={range}
+            onRangeChange={setRange}
+            isLoading={isHistoryLoading}
+          />
+        ) : null}
+
+        {/* 8. Deep-Dive Atmospheric Charts (Humidity & Precipitation) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isHistoryLoading && !history ? (
+            <>
+              <ChartSkeleton height={260} />
+              <ChartSkeleton height={260} />
+            </>
+          ) : (
+            <>
+              <HumidityChart
+                observations={history?.observations || []}
+                range={range}
+              />
+              <PrecipitationChart
+                observations={history?.observations || []}
+                totalPrecipitation={history?.analytics.total_precipitation || 0}
+                range={range}
+              />
+            </>
+          )}
+        </div>
+
+        {/* 9. Wind Telemetry & Weather Condition Distribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isHistoryLoading && !history ? (
+            <>
+              <ChartSkeleton height={260} />
+              <ChartSkeleton height={260} />
+            </>
+          ) : (
+            <>
+              <WindAnalytics
+                observations={history?.observations || []}
+                avgWindSpeed={history?.analytics.average_wind_speed || 0}
+                maxWindSpeed={history?.analytics.max_wind_speed || 0}
+                currentDirection={weatherData?.current.wind_direction}
+                range={range}
+              />
+              <WeatherConditionChart
+                distribution={history?.analytics.condition_distribution || []}
+                totalObservations={history?.analytics.observation_count || 0}
+              />
+            </>
+          )}
+        </div>
+
+        {/* 10. Solar Ephemeris & Weather Alerts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SunriseSunset
+            sunrise={weatherData?.daily[0]?.sunrise}
+            sunset={weatherData?.daily[0]?.sunset}
+            dayLengthSeconds={weatherData?.daily[0]?.day_length_seconds}
+          />
+          <WeatherAlerts alerts={weatherData?.alerts} />
+        </div>
+      </main>
+
+      {/* Platform Footer */}
+      <footer className="border-t border-neutral-900 bg-neutral-950 mt-12 py-8 text-neutral-500 text-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-neutral-300">Weather Intelligence Platform</span>
+            <span>•</span>
+            <span>Vercel + Next.js App Router + Supabase + Vercel Cron</span>
+          </div>
+          <div className="text-neutral-500">
+            Automated Cron collection every 5 minutes • Normalized WMO telemetry
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
