@@ -3,6 +3,7 @@ import { GET as weatherGET } from '../app/api/weather/route';
 import { GET as locationsGET } from '../app/api/locations/route';
 import { GET as historyGET } from '../app/api/history/route';
 import { GET as cronGET } from '../app/api/cron/weather/route';
+import { GET as predictionsGET } from '../app/api/predictions/route';
 
 function assert(condition: boolean, msg: string) {
   if (!condition) {
@@ -86,7 +87,18 @@ async function runEndpointTests() {
   // Without Supabase configured, should return 503 (Configuration Error) or 200 if connected
   assert(res8.status === 503 || res8.status === 200, `Expected 503 (Supabase unconfigured) or 200, got ${res8.status}`);
   const data8 = await res8.json();
-  console.log(`    Cron response message: ${data8.message || data8.error}`);
+  // Test 9: GET /api/predictions (ML Prediction endpoint)
+  console.log('\n[9] Testing GET /api/predictions (Valid Location)...');
+  const req9 = new NextRequest('http://localhost:3000/api/predictions?locationId=b1b51075-8025-4202-b054-e0eb29241511');
+  const res9 = await predictionsGET(req9);
+  assert(res9.status === 200, `Expected 200 for predictions endpoint, got ${res9.status}`);
+  const data9 = await res9.json();
+  assert(typeof data9.prediction?.temperature === 'number', 'Predicted temperature is a valid number');
+  assert(typeof data9.prediction?.rain_probability === 'number', 'Predicted rain probability is a valid number');
+  assert(typeof data9.prediction?.target_time === 'string', 'Target timestamp is present');
+  assert(typeof data9.model?.version === 'string', 'Model version is present');
+  assert(Array.isArray(data9.history), 'Prediction evaluation history array is present');
+  console.log(`    ML Next-Hour Prediction: ${data9.prediction.temperature}°C, Rain: ${data9.prediction.rain_probability}%, Model: ${data9.model.type} ${data9.model.version}`);
 
   console.log('\n--- ALL ROUTE HANDLER TESTS PASSED SUCCESSFULLY ---');
 }

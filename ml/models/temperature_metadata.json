@@ -1,0 +1,115 @@
+{
+  "model_version": "v1.0",
+  "model_name": "Next-Hour Temperature Predictor",
+  "target": "temperature_1h",
+  "model_type": "LinearRegression",
+  "trained_at": "2026-09-26T06:57:03.280648+00:00",
+  "training_start": "2026-06-28 00:00:00",
+  "training_end": "2026-09-26 12:00:00",
+  "dataset_size": 2166,
+  "train_rows": 1516,
+  "test_rows": 325,
+  "feature_count": 32,
+  "features": [
+    "temperature",
+    "feels_like",
+    "humidity",
+    "pressure",
+    "wind_speed",
+    "wind_direction",
+    "precipitation",
+    "cloud_cover",
+    "visibility",
+    "uv_index",
+    "weather_code",
+    "hour",
+    "day_of_week",
+    "day_of_year",
+    "month",
+    "is_day",
+    "hour_sin",
+    "hour_cos",
+    "temperature_lag_1",
+    "temperature_lag_2",
+    "temperature_lag_3",
+    "temperature_lag_6",
+    "humidity_lag_1",
+    "humidity_lag_3",
+    "wind_speed_lag_1",
+    "precipitation_lag_1",
+    "temperature_rolling_mean_3",
+    "temperature_rolling_mean_6",
+    "temperature_rolling_mean_12",
+    "humidity_rolling_mean_3",
+    "wind_rolling_mean_3",
+    "precipitation_rolling_sum_3"
+  ],
+  "metrics": {
+    "mae": 0.5696,
+    "rmse": 0.7804,
+    "r2": 0.9016
+  },
+  "all_models_evaluated": [
+    {
+      "model": "Persistence Baseline",
+      "type": "Persistence",
+      "metrics": {
+        "mae": 0.6917,
+        "rmse": 0.9692,
+        "r2": 0.8482
+      }
+    },
+    {
+      "model": "Linear Regression",
+      "type": "LinearRegression",
+      "metrics": {
+        "mae": 0.5696,
+        "rmse": 0.7804,
+        "r2": 0.9016
+      }
+    },
+    {
+      "model": "Random Forest Regressor",
+      "type": "RandomForestRegressor",
+      "metrics": {
+        "mae": 0.6071,
+        "rmse": 0.9884,
+        "r2": 0.8422
+      }
+    }
+  ],
+  "top_features": [
+    {
+      "feature": "temperature",
+      "importance": 0.6763
+    },
+    {
+      "feature": "uv_index",
+      "importance": 0.1722
+    },
+    {
+      "feature": "feels_like",
+      "importance": 0.0294
+    },
+    {
+      "feature": "temperature_lag_6",
+      "importance": 0.022
+    },
+    {
+      "feature": "hour_cos",
+      "importance": 0.0195
+    },
+    {
+      "feature": "hour_sin",
+      "importance": 0.0117
+    },
+    {
+      "feature": "temperature_rolling_mean_12",
+      "importance": 0.008
+    },
+    {
+      "feature": "temperature_lag_3",
+      "importance": 0.0063
+    }
+  ]
+}

@@ -17,6 +17,10 @@ import { WeatherConditionChart } from '@/components/dashboard/WeatherConditionCh
 import { WeatherAnalytics } from '@/components/dashboard/WeatherAnalytics';
 import { SunriseSunset } from '@/components/dashboard/SunriseSunset';
 import { WeatherAlerts } from '@/components/dashboard/WeatherAlerts';
+import { NextHourPrediction } from '@/components/dashboard/NextHourPrediction';
+import { PredictionPerformance } from '@/components/dashboard/PredictionPerformance';
+import { PredictionHistory } from '@/components/dashboard/PredictionHistory';
+import { usePrediction } from '@/hooks/usePrediction';
 import { History, Sparkles } from 'lucide-react';
 import {
   CurrentWeatherSkeleton,
@@ -69,6 +73,16 @@ export default function WeatherDashboardPage() {
     initialRange: '24h',
   });
 
+  const {
+    predictionData,
+    isLoading: isPredictionLoading,
+    refreshPrediction,
+  } = usePrediction({
+    locationId: selectedLocation?.id || null,
+    latitude: selectedLocation?.latitude,
+    longitude: selectedLocation?.longitude,
+  });
+
   const [analyticsTimelineMode, setAnalyticsTimelineMode] = React.useState<'past' | 'forecast'>('past');
 
   return (
@@ -91,6 +105,7 @@ export default function WeatherDashboardPage() {
         onRefresh={() => {
           refreshWeather();
           refreshHistory();
+          refreshPrediction();
         }}
         isRefreshing={isRefreshing}
       />
@@ -134,6 +149,12 @@ export default function WeatherDashboardPage() {
           <WeatherMetrics current={weatherData.current} />
         ) : null}
 
+        {/* 3.5 NEXT-HOUR ML PREDICTION */}
+        <NextHourPrediction
+          predictionData={predictionData}
+          isLoading={isPredictionLoading}
+        />
+
         {/* 4. Temperature History Chart (Primary Time-Series Visualization) */}
         {isHistoryLoading && !history ? (
           <ChartSkeleton height={320} />
@@ -172,6 +193,12 @@ export default function WeatherDashboardPage() {
             isLoading={isHistoryLoading}
           />
         ) : null}
+
+        {/* 7.5 ML PREDICTION PERFORMANCE & EMPIRICAL VALIDATION */}
+        <PredictionPerformance
+          predictionData={predictionData}
+          isLoading={isPredictionLoading}
+        />
 
         {/* Section Header with Synchronized Timeline Mode Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3">
@@ -268,6 +295,12 @@ export default function WeatherDashboardPage() {
             </>
           )}
         </div>
+
+        {/* 9.5 PREDICTION AUDIT & VERIFICATION HISTORY */}
+        <PredictionHistory
+          predictionData={predictionData}
+          isLoading={isPredictionLoading}
+        />
 
         {/* 10. Solar Ephemeris & Weather Alerts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

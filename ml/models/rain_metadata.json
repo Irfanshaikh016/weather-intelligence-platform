@@ -1,0 +1,86 @@
+{
+  "model_version": "v1.0",
+  "model_name": "Next-Hour Rain Classifier",
+  "target": "rain_1h",
+  "model_type": "Persistence",
+  "trained_at": "2026-09-26T06:57:23.364888+00:00",
+  "dataset_size": 2166,
+  "train_rows": 1516,
+  "test_rows": 325,
+  "metrics": {
+    "accuracy": 0.8708,
+    "precision": 0.7375,
+    "recall": 0.7375,
+    "f1": 0.7375,
+    "brier_score": 0.0
+  },
+  "all_models_evaluated": [
+    {
+      "model": "Persistence Baseline",
+      "type": "Persistence",
+      "metrics": {
+        "accuracy": 0.8708,
+        "precision": 0.7375,
+        "recall": 0.7375,
+        "f1": 0.7375,
+        "brier_score": 0.0
+      }
+    },
+    {
+      "model": "Logistic Regression",
+      "type": "LogisticRegression",
+      "metrics": {
+        "accuracy": 0.7262,
+        "precision": 0.471,
+        "recall": 0.9125,
+        "f1": 0.6213,
+        "brier_score": 0.2184
+      }
+    },
+    {
+      "model": "Random Forest Classifier",
+      "type": "RandomForestClassifier",
+      "metrics": {
+        "accuracy": 0.8,
+        "precision": 0.6744,
+        "recall": 0.3625,
+        "f1": 0.4715,
+        "brier_score": 0.1326
+      }
+    }
+  ],
+  "top_features": [
+    {
+      "feature": "precipitation",
+      "importance": 0.1465
+    },
+    {
+      "feature": "weather_code",
+      "importance": 0.1314
+    },
+    {
+      "feature": "visibility",
+      "importance": 0.109
+    },
+    {
+      "feature": "precipitation_lag_1",
+      "importance": 0.093
+    },
+    {
+      "feature": "precipitation_rolling_sum_3",
+      "importance": 0.0918
+    },
+    {
+      "feature": "uv_index",
+      "importance": 0.039
+    },
+    {
+      "feature": "wind_speed",
+      "importance": 0.0372
+    },
+    {
+      "feature": "wind_rolling_mean_3",
+      "importance": 0.0327
+    }
+  ]
+}
