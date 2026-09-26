@@ -156,7 +156,7 @@ export default function WeatherDashboardPage() {
         />
 
         {/* 4. Temperature History Chart (Primary Time-Series Visualization) */}
-        {isHistoryLoading && !history ? (
+        {!history && !weatherData ? (
           <ChartSkeleton height={320} />
         ) : (
           <TemperatureChart
@@ -240,7 +240,7 @@ export default function WeatherDashboardPage() {
 
         {/* 8. Deep-Dive Atmospheric Charts (Humidity & Precipitation) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {isHistoryLoading && !history ? (
+          {!history && !weatherData ? (
             <>
               <ChartSkeleton height={260} />
               <ChartSkeleton height={260} />
@@ -268,7 +268,7 @@ export default function WeatherDashboardPage() {
 
         {/* 9. Wind Telemetry & Weather Condition Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {isHistoryLoading && !history ? (
+          {!history && !weatherData ? (
             <>
               <ChartSkeleton height={260} />
               <ChartSkeleton height={260} />
