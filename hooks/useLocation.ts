@@ -14,9 +14,20 @@ function createUUID(): string {
   });
 }
 
+const DEFAULT_INITIAL_LOCATION: Location = {
+  id: 'b1b51075-8025-4202-b054-e0eb29241511',
+  city: 'Pune',
+  country: 'India',
+  region: 'Maharashtra',
+  latitude: 18.5204,
+  longitude: 73.8567,
+  timezone: 'Asia/Kolkata',
+  is_active: true,
+};
+
 export function useLocation() {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [locations, setLocations] = useState<Location[]>([DEFAULT_INITIAL_LOCATION]);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(DEFAULT_INITIAL_LOCATION);
   const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isGeoLoading, setIsGeoLoading] = useState(false);

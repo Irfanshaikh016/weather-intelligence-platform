@@ -9,6 +9,27 @@ const DEFAULT_HEADERS = {
   'User-Agent': 'WeatherIntelligencePlatform/2.0 (contact: support@weather-intel.app)',
 };
 
+async function fetchWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
+  let lastError: unknown;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      if (res.status >= 500 && i < retries) {
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastError = err;
+      if (i < retries) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
 export interface FetchWeatherOptions {
   latitude: number;
   longitude: number;
@@ -66,9 +87,8 @@ export async function fetchWeatherFromOpenMeteo(
 
   const url = `${FORECAST_BASE_URL}?${params.toString()}`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     headers: DEFAULT_HEADERS,
-    next: { revalidate: 60 },
   });
 
   if (!response.ok) {
@@ -116,9 +136,8 @@ export async function fetchHistoricalFromOpenMeteo(options: {
 
   const url = `${FORECAST_BASE_URL}?${params.toString()}`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     headers: DEFAULT_HEADERS,
-    next: { revalidate: 300 },
   });
 
   if (!response.ok) {
@@ -179,7 +198,7 @@ export async function searchLocationsFromOpenMeteo(
 
   const url = `${GEOCODING_BASE_URL}?${params.toString()}`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     headers: DEFAULT_HEADERS,
   });
 

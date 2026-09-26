@@ -12,7 +12,7 @@ export function isValidLongitude(lon: unknown): boolean {
   return !isNaN(num) && isFinite(num) && num >= -180 && num <= 180;
 }
 
-export function isValidUUID(id: unknown): boolean {
+export function isValidUUID(id: unknown): id is string {
   if (!id || typeof id !== 'string') return false;
   return UUID_REGEX.test(id.trim());
 }
