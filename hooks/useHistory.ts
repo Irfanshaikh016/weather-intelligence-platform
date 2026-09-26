@@ -2,10 +2,23 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { WeatherHistory } from '@/types/weather';
+import { isValidUUID } from '@/lib/validation';
+import { computeWeatherAnalytics } from '@/lib/analytics/weather';
 
 interface UseHistoryProps {
   locationId: string | null;
   initialRange?: '24h' | '7d' | '30d';
+}
+
+function createEmptyHistory(locId: string, range: '24h' | '7d' | '30d'): WeatherHistory {
+  return {
+    location_id: locId,
+    range,
+    start_date: new Date().toISOString(),
+    end_date: new Date().toISOString(),
+    observations: [],
+    analytics: computeWeatherAnalytics([], range),
+  };
 }
 
 export function useHistory({ locationId, initialRange = '24h' }: UseHistoryProps) {
@@ -15,7 +28,15 @@ export function useHistory({ locationId, initialRange = '24h' }: UseHistoryProps
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!locationId) return;
+    // If no locationId or invalid UUID, set empty history asynchronously without triggering synchronous effect render
+    if (!locationId || !isValidUUID(locationId)) {
+      Promise.resolve().then(() => {
+        setHistory(createEmptyHistory(locationId || '', range));
+        setError(null);
+        setIsLoading(false);
+      });
+      return;
+    }
 
     let active = true;
 
@@ -26,6 +47,10 @@ export function useHistory({ locationId, initialRange = '24h' }: UseHistoryProps
 
     fetch(`/api/history?${params.toString()}`)
       .then((res) => {
+        // If 404 or 400 (e.g. location has no records yet), treat as empty historical dataset
+        if (res.status === 404 || res.status === 400) {
+          return createEmptyHistory(locationId, range);
+        }
         if (!res.ok) {
           throw new Error(`Failed to fetch history (${res.status})`);
         }
@@ -52,7 +77,12 @@ export function useHistory({ locationId, initialRange = '24h' }: UseHistoryProps
   }, [locationId, range]);
 
   const refreshHistory = useCallback(async () => {
-    if (!locationId) return;
+    if (!locationId || !isValidUUID(locationId)) {
+      setHistory(createEmptyHistory(locationId || '', range));
+      setError(null);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -63,6 +93,10 @@ export function useHistory({ locationId, initialRange = '24h' }: UseHistoryProps
       });
 
       const res = await fetch(`/api/history?${params.toString()}`);
+      if (res.status === 404 || res.status === 400) {
+        setHistory(createEmptyHistory(locationId, range));
+        return;
+      }
       if (!res.ok) {
         throw new Error(`Failed to fetch history (${res.status})`);
       }

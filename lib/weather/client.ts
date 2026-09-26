@@ -4,6 +4,11 @@ import { LocationSearchResult } from '@/types/weather';
 const FORECAST_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
 const GEOCODING_BASE_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 
+const DEFAULT_HEADERS = {
+  Accept: 'application/json',
+  'User-Agent': 'WeatherIntelligencePlatform/2.0 (contact: support@weather-intel.app)',
+};
+
 export interface FetchWeatherOptions {
   latitude: number;
   longitude: number;
@@ -62,10 +67,8 @@ export async function fetchWeatherFromOpenMeteo(
   const url = `${FORECAST_BASE_URL}?${params.toString()}`;
 
   const response = await fetch(url, {
-    headers: {
-      Accept: 'application/json',
-    },
-    next: { revalidate: 60 }, // cache 60s at edge
+    headers: DEFAULT_HEADERS,
+    next: { revalidate: 60 },
   });
 
   if (!response.ok) {
@@ -95,9 +98,7 @@ export async function searchLocationsFromOpenMeteo(
   const url = `${GEOCODING_BASE_URL}?${params.toString()}`;
 
   const response = await fetch(url, {
-    headers: {
-      Accept: 'application/json',
-    },
+    headers: DEFAULT_HEADERS,
   });
 
   if (!response.ok) {

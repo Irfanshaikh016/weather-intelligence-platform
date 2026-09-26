@@ -3,6 +3,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Location, LocationSearchResult } from '@/types/weather';
 
+function createUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function useLocation() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -95,7 +106,7 @@ export function useLocation() {
         setSelectedLocation(savedLoc);
       } else {
         const tempLoc: Location = {
-          id: `temp-${Date.now()}`,
+          id: createUUID(),
           city: result.name,
           country: result.country,
           region: result.admin1 || null,
@@ -108,7 +119,7 @@ export function useLocation() {
       }
     } catch {
       const tempLoc: Location = {
-        id: `temp-${Date.now()}`,
+        id: createUUID(),
         city: result.name,
         country: result.country,
         region: result.admin1 || null,
@@ -153,7 +164,7 @@ export function useLocation() {
           }
 
           const userLoc: Location = {
-            id: `geo-${Date.now()}`,
+            id: createUUID(),
             city: cityName,
             country: countryName,
             region: null,
@@ -166,7 +177,7 @@ export function useLocation() {
           setSelectedLocation(userLoc);
         } catch {
           const userLoc: Location = {
-            id: `geo-${Date.now()}`,
+            id: createUUID(),
             city: 'My Location',
             country: '',
             region: null,

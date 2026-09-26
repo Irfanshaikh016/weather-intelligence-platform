@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const startParam = searchParams.get('start');
     const endParam = searchParams.get('end');
 
-    // Validate Location ID
+    // Validate Location ID according to Section 18
     if (!isValidUUID(locationId)) {
       return NextResponse.json(
         {
