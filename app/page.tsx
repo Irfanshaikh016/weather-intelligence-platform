@@ -63,6 +63,8 @@ export default function WeatherDashboardPage() {
     refreshHistory,
   } = useHistory({
     locationId: selectedLocation?.id || null,
+    latitude: selectedLocation?.latitude,
+    longitude: selectedLocation?.longitude,
     initialRange: '24h',
   });
 

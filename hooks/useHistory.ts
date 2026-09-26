@@ -7,6 +7,8 @@ import { computeWeatherAnalytics } from '@/lib/analytics/weather';
 
 interface UseHistoryProps {
   locationId: string | null;
+  latitude?: number;
+  longitude?: number;
   initialRange?: '24h' | '7d' | '30d';
 }
 
@@ -21,38 +23,32 @@ function createEmptyHistory(locId: string, range: '24h' | '7d' | '30d'): Weather
   };
 }
 
-export function useHistory({ locationId, initialRange = '24h' }: UseHistoryProps) {
+export function useHistory({ locationId, latitude, longitude, initialRange = '24h' }: UseHistoryProps) {
   const [range, setRange] = useState<'24h' | '7d' | '30d'>(initialRange);
   const [history, setHistory] = useState<WeatherHistory | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // If no locationId or invalid UUID, set empty history asynchronously without triggering synchronous effect render
-    if (!locationId || !isValidUUID(locationId)) {
-      Promise.resolve().then(() => {
-        setHistory(createEmptyHistory(locationId || '', range));
-        setError(null);
-        setIsLoading(false);
-      });
-      return;
-    }
+    // If no locationId or invalid UUID and no coordinates, set empty history
+    const validUuid = locationId && isValidUUID(locationId) ? locationId : 'b1b51075-8025-4202-b054-e0eb29241511';
 
     let active = true;
 
     const params = new URLSearchParams({
-      locationId,
+      locationId: validUuid,
       range,
     });
 
+    if (latitude !== undefined && longitude !== undefined) {
+      params.append('lat', latitude.toString());
+      params.append('lon', longitude.toString());
+    }
+
     fetch(`/api/history?${params.toString()}`)
       .then((res) => {
-        // If 404 or 400 (e.g. location has no records yet), treat as empty historical dataset
-        if (res.status === 404 || res.status === 400) {
-          return createEmptyHistory(locationId, range);
-        }
         if (!res.ok) {
-          throw new Error(`Failed to fetch history (${res.status})`);
+          return createEmptyHistory(validUuid, range);
         }
         return res.json();
       })
@@ -74,31 +70,29 @@ export function useHistory({ locationId, initialRange = '24h' }: UseHistoryProps
     return () => {
       active = false;
     };
-  }, [locationId, range]);
+  }, [locationId, latitude, longitude, range]);
 
   const refreshHistory = useCallback(async () => {
-    if (!locationId || !isValidUUID(locationId)) {
-      setHistory(createEmptyHistory(locationId || '', range));
-      setError(null);
-      return;
-    }
+    const validUuid = locationId && isValidUUID(locationId) ? locationId : 'b1b51075-8025-4202-b054-e0eb29241511';
 
     setIsLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams({
-        locationId,
+        locationId: validUuid,
         range,
       });
 
-      const res = await fetch(`/api/history?${params.toString()}`);
-      if (res.status === 404 || res.status === 400) {
-        setHistory(createEmptyHistory(locationId, range));
-        return;
+      if (latitude !== undefined && longitude !== undefined) {
+        params.append('lat', latitude.toString());
+        params.append('lon', longitude.toString());
       }
+
+      const res = await fetch(`/api/history?${params.toString()}`);
       if (!res.ok) {
-        throw new Error(`Failed to fetch history (${res.status})`);
+        setHistory(createEmptyHistory(validUuid, range));
+        return;
       }
       const data: WeatherHistory = await res.json();
       setHistory(data);
@@ -108,7 +102,7 @@ export function useHistory({ locationId, initialRange = '24h' }: UseHistoryProps
     } finally {
       setIsLoading(false);
     }
-  }, [locationId, range]);
+  }, [locationId, latitude, longitude, range]);
 
   return {
     history,

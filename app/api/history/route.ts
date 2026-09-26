@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { isValidUUID, isValidHistoryRange, isValidIsoDate } from '@/lib/validation';
+import { isValidUUID, isValidHistoryRange, isValidIsoDate, isValidLatitude, isValidLongitude } from '@/lib/validation';
 import { computeWeatherAnalytics } from '@/lib/analytics/weather';
+import { fetchHistoricalFromOpenMeteo } from '@/lib/weather/client';
 import { WeatherHistory, WeatherObservation } from '@/types/weather';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,8 @@ export async function GET(request: NextRequest) {
     const range = searchParams.get('range') || '24h';
     const startParam = searchParams.get('start');
     const endParam = searchParams.get('end');
+    const latParam = searchParams.get('lat');
+    const lonParam = searchParams.get('lon');
 
     // Validate Location ID according to Section 18
     if (!isValidUUID(locationId)) {
@@ -54,24 +57,37 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createServerSupabaseClient();
+    let latitude = isValidLatitude(latParam) ? parseFloat(latParam!) : null;
+    let longitude = isValidLongitude(lonParam) ? parseFloat(lonParam!) : null;
+
     if (!supabase) {
-      // Graceful fallback when database is not yet wired
-      const emptyAnalytics = computeWeatherAnalytics([], queryRange);
+      // Supabase not configured: retrieve real meteorological past observations directly
+      let fallbackObservations: WeatherObservation[] = [];
+      if (latitude !== null && longitude !== null) {
+        fallbackObservations = await fetchHistoricalFromOpenMeteo({
+          latitude,
+          longitude,
+          locationId: locationId!,
+          range: queryRange,
+        });
+      }
+
+      const analytics = computeWeatherAnalytics(fallbackObservations, queryRange);
       const response: WeatherHistory = {
         location_id: locationId!,
         range: queryRange,
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
-        observations: [],
-        analytics: emptyAnalytics,
+        observations: fallbackObservations,
+        analytics,
       };
       return NextResponse.json(response);
     }
 
-    // Check location existence
+    // Check location existence in database
     const { data: locationData, error: locError } = await supabase
       .from('locations')
-      .select('id')
+      .select('id, latitude, longitude')
       .eq('id', locationId)
       .maybeSingle();
 
@@ -80,6 +96,25 @@ export async function GET(request: NextRequest) {
     }
 
     if (!locationData && !locError) {
+      // If coordinates provided, allow fallback instead of 404
+      if (latitude !== null && longitude !== null) {
+        const fallbackObservations = await fetchHistoricalFromOpenMeteo({
+          latitude,
+          longitude,
+          locationId: locationId!,
+          range: queryRange,
+        });
+        const analytics = computeWeatherAnalytics(fallbackObservations, queryRange);
+        return NextResponse.json({
+          location_id: locationId!,
+          range: queryRange,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          observations: fallbackObservations,
+          analytics,
+        });
+      }
+
       return NextResponse.json(
         {
           error: 'Not Found',
@@ -89,7 +124,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Query observations strictly within the bounded range
+    if (locationData) {
+      latitude = locationData.latitude;
+      longitude = locationData.longitude;
+    }
+
+    // Query observations strictly within the bounded range from Supabase
     const { data: rawObservations, error: obsError } = await supabase
       .from('weather_observations')
       .select('*')
@@ -107,7 +147,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const observations: WeatherObservation[] = (rawObservations || []).map((row) => ({
+    let observations: WeatherObservation[] = (rawObservations || []).map((row) => ({
       id: Number(row.id),
       location_id: row.location_id,
       recorded_at: row.recorded_at,
@@ -125,6 +165,49 @@ export async function GET(request: NextRequest) {
       weather_code: Number(row.weather_code),
       created_at: row.created_at,
     }));
+
+    // If database has 0 historical observations yet (e.g. freshly deployed app),
+    // fetch real meteorological hourly observations from Open-Meteo so charts populate immediately!
+    if (observations.length === 0 && latitude !== null && longitude !== null) {
+      const liveHistory = await fetchHistoricalFromOpenMeteo({
+        latitude,
+        longitude,
+        locationId: locationId!,
+        range: queryRange,
+      });
+
+      if (liveHistory.length > 0) {
+        observations = liveHistory;
+
+        // Optionally seed observations into Supabase in background
+        if (locationData) {
+          const toInsert = liveHistory.map((obs) => ({
+            location_id: locationId,
+            recorded_at: obs.recorded_at,
+            temperature: obs.temperature,
+            feels_like: obs.feels_like,
+            humidity: obs.humidity,
+            pressure: obs.pressure,
+            wind_speed: obs.wind_speed,
+            wind_direction: obs.wind_direction,
+            precipitation: obs.precipitation,
+            precipitation_probability: obs.precipitation_probability,
+            cloud_cover: obs.cloud_cover,
+            visibility: obs.visibility,
+            uv_index: obs.uv_index,
+            weather_code: obs.weather_code,
+          }));
+
+          try {
+            await supabase
+              .from('weather_observations')
+              .upsert(toInsert, { onConflict: 'location_id,recorded_at', ignoreDuplicates: true });
+          } catch {
+            // Non-blocking background caching
+          }
+        }
+      }
+    }
 
     // Calculate previous period for comparison (if applicable)
     let previousObservations: WeatherObservation[] | undefined;
