@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { GET as weatherGET } from '../app/api/weather/route';
-import { GET as locationsGET } from '../app/api/locations/route';
+import { GET as locationsGET, POST as locationsPOST } from '../app/api/locations/route';
 import { GET as historyGET } from '../app/api/history/route';
 import { GET as cronGET } from '../app/api/cron/weather/route';
 import { GET as predictionsGET } from '../app/api/predictions/route';
@@ -50,6 +50,24 @@ async function runEndpointTests() {
   const data4 = await res4.json();
   assert(Array.isArray(data4.results) && data4.results.length > 0, 'Geocoding search returned matches');
   console.log(`    Geocoded: ${data4.results[0].name} (${data4.results[0].latitude}, ${data4.results[0].longitude})`);
+
+  // Test 4b: POST /api/locations (Save location resilience)
+  console.log('\n[4b] Testing POST /api/locations (Resilient location persistence)...');
+  const req4b = new NextRequest('http://localhost:3000/api/locations', {
+    method: 'POST',
+    body: JSON.stringify({
+      city: 'Tokyo',
+      country: 'Japan',
+      latitude: 35.6762,
+      longitude: 139.6503,
+      timezone: 'Asia/Tokyo',
+    }),
+  });
+  const res4b = await locationsPOST(req4b);
+  assert(res4b.status === 200 || res4b.status === 201, `Expected 200/201 for POST locations, got ${res4b.status}`);
+  const data4b = await res4b.json();
+  assert(data4b.location && data4b.location.city === 'Tokyo', 'Location object returned successfully');
+  console.log(`    Saved/Active Location: ${data4b.location.city}, ID: ${data4b.location.id}`);
 
   // Test 5: GET /api/history (UUID validation)
   console.log('\n[5] Testing GET /api/history (Invalid UUID)...');

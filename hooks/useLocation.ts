@@ -113,7 +113,15 @@ export function useLocation() {
       if (res.ok) {
         const data = await res.json();
         const savedLoc: Location = data.location;
-        setLocations((prev) => [savedLoc, ...prev]);
+        setLocations((prev) => [
+          savedLoc,
+          ...prev.filter(
+            (l) =>
+              l.id !== savedLoc.id &&
+              (Math.abs(l.latitude - savedLoc.latitude) >= 0.01 ||
+                Math.abs(l.longitude - savedLoc.longitude) >= 0.01)
+          ),
+        ]);
         setSelectedLocation(savedLoc);
       } else {
         const tempLoc: Location = {
