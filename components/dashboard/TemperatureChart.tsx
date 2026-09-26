@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -10,68 +10,130 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
-import { WeatherObservation } from '@/types/weather';
+import { WeatherObservation, HourlyWeather } from '@/types/weather';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDegree } from '@/lib/utils';
-import { Thermometer } from 'lucide-react';
+import { Thermometer, Sparkles, History } from 'lucide-react';
 import { useIsMounted } from '@/hooks/useIsMounted';
 
 interface TemperatureChartProps {
   observations: WeatherObservation[];
+  hourlyForecast?: HourlyWeather[];
   range: '24h' | '7d' | '30d' | 'custom';
+  forecastMode?: 'past' | 'forecast';
+  onForecastModeChange?: (mode: 'past' | 'forecast') => void;
 }
 
-export function TemperatureChart({ observations, range }: TemperatureChartProps) {
+export function TemperatureChart({
+  observations,
+  hourlyForecast = [],
+  range,
+  forecastMode,
+  onForecastModeChange,
+}: TemperatureChartProps) {
   const mounted = useIsMounted();
+  const [internalMode, setInternalMode] = useState<'past' | 'forecast'>('past');
 
-  if (!observations || observations.length === 0) {
+  const activeMode = forecastMode ?? internalMode;
+  const setMode = onForecastModeChange ?? setInternalMode;
+
+  const hasObservations = observations && observations.length > 0;
+  const hasForecast = hourlyForecast && hourlyForecast.length > 0;
+
+  const effectiveMode = !hasObservations && hasForecast ? 'forecast' : activeMode;
+
+  if (!hasObservations && !hasForecast) {
     return (
       <div className="bg-neutral-900/60 border border-neutral-800 rounded-3xl p-6 shadow-xl backdrop-blur-sm">
         <div className="flex items-center gap-2 mb-4">
           <Thermometer className="w-4 h-4 text-cyan-400" />
           <h2 className="text-sm font-semibold tracking-wider text-neutral-200 uppercase">
-            Temperature History
+            Temperature Analytics
           </h2>
         </div>
         <EmptyState
           title="No Temperature Records"
-          message="No historical observations recorded for this period yet. Data is gathered every 5 minutes."
+          message="No historical observations or forecast records available for this period."
         />
       </div>
     );
   }
 
-  // Format data for chart
-  const chartData = observations.map((obs) => {
-    const d = new Date(obs.recorded_at);
-    let label = '';
-    if (range === '24h') {
-      label = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    } else {
-      label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' });
-    }
+  let chartData: Array<{ label: string; temperature: number; feels_like: number }> = [];
 
-    return {
-      timestamp: obs.recorded_at,
-      label,
-      temperature: Number(obs.temperature),
-      feels_like: Number(obs.feels_like),
-    };
-  });
+  if (effectiveMode === 'forecast' && hasForecast) {
+    const next24 = hourlyForecast.slice(0, 24);
+    chartData = next24.map((item) => {
+      const d = new Date(item.time);
+      const label = d.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+      return {
+        label,
+        temperature: Number(item.temperature),
+        feels_like: Number(item.feels_like ?? item.temperature),
+      };
+    });
+  } else {
+    chartData = observations.map((obs) => {
+      const d = new Date(obs.recorded_at);
+      const label =
+        range === '24h'
+          ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+          : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' });
+
+      return {
+        label,
+        temperature: Number(obs.temperature),
+        feels_like: Number(obs.feels_like),
+      };
+    });
+  }
 
   const temps = chartData.map((d) => d.temperature);
-  const minTemp = Math.floor(Math.min(...temps) - 2);
-  const maxTemp = Math.ceil(Math.max(...temps) + 2);
+  const minTemp = Math.floor((temps.length > 0 ? Math.min(...temps) : 15) - 2);
+  const maxTemp = Math.ceil((temps.length > 0 ? Math.max(...temps) : 30) + 2);
 
   return (
     <div className="bg-neutral-900/60 border border-neutral-800 rounded-3xl p-6 shadow-xl backdrop-blur-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-        <div className="flex items-center gap-2">
-          <Thermometer className="w-4 h-4 text-cyan-400" />
-          <h2 className="text-sm font-semibold tracking-wider text-neutral-200 uppercase">
-            Temperature History
-          </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Thermometer className="w-4 h-4 text-cyan-400" />
+            <h2 className="text-sm font-semibold tracking-wider text-neutral-200 uppercase">
+              {effectiveMode === 'forecast' ? 'Temperature Projections' : 'Temperature History'}
+            </h2>
+          </div>
+
+          {/* Past / Future Day Mode Switcher */}
+          {hasForecast && hasObservations && (
+            <div className="inline-flex items-center p-0.5 rounded-xl bg-neutral-950/80 border border-neutral-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setMode('past')}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                  effectiveMode === 'past'
+                    ? 'bg-neutral-800 text-neutral-100 shadow-sm'
+                    : 'text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <History className="w-3 h-3 text-neutral-400" />
+                Past
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('forecast')}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                  effectiveMode === 'forecast'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
+                    : 'text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <Sparkles className="w-3 h-3 text-cyan-400" />
+                Next 24h
+              </button>
+            </div>
+          )}
         </div>
+
         <div className="flex items-center gap-4 text-xs text-neutral-400">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
@@ -105,7 +167,7 @@ export function TemperatureChart({ observations, range }: TemperatureChartProps)
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
-                minTickGap={30}
+                minTickGap={25}
               />
               <YAxis
                 domain={[minTemp, maxTemp]}

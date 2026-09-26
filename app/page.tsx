@@ -17,6 +17,7 @@ import { WeatherConditionChart } from '@/components/dashboard/WeatherConditionCh
 import { WeatherAnalytics } from '@/components/dashboard/WeatherAnalytics';
 import { SunriseSunset } from '@/components/dashboard/SunriseSunset';
 import { WeatherAlerts } from '@/components/dashboard/WeatherAlerts';
+import { History, Sparkles } from 'lucide-react';
 import {
   CurrentWeatherSkeleton,
   MetricsSkeleton,
@@ -67,6 +68,8 @@ export default function WeatherDashboardPage() {
     longitude: selectedLocation?.longitude,
     initialRange: '24h',
   });
+
+  const [analyticsTimelineMode, setAnalyticsTimelineMode] = React.useState<'past' | 'forecast'>('past');
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
@@ -137,7 +140,10 @@ export default function WeatherDashboardPage() {
         ) : (
           <TemperatureChart
             observations={history?.observations || []}
+            hourlyForecast={weatherData?.hourly}
             range={range}
+            forecastMode={analyticsTimelineMode}
+            onForecastModeChange={setAnalyticsTimelineMode}
           />
         )}
 
@@ -167,6 +173,44 @@ export default function WeatherDashboardPage() {
           />
         ) : null}
 
+        {/* Section Header with Synchronized Timeline Mode Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3">
+          <div>
+            <h3 className="text-base font-semibold text-neutral-100 flex items-center gap-2">
+              Atmospheric Dynamics & Projections
+            </h3>
+            <p className="text-xs text-neutral-400">
+              Interactive telemetry: inspect historical records or preview next 24-hour forecasts across all dynamics.
+            </p>
+          </div>
+          <div className="inline-flex items-center p-1 rounded-xl bg-neutral-900 border border-neutral-800 text-xs self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setAnalyticsTimelineMode('past')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                analyticsTimelineMode === 'past'
+                  ? 'bg-neutral-800 text-neutral-100 shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <History className="w-3.5 h-3.5 text-neutral-400" />
+              Recorded Telemetry
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnalyticsTimelineMode('forecast')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                analyticsTimelineMode === 'forecast'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              Next 24H Forecast
+            </button>
+          </div>
+        </div>
+
         {/* 8. Deep-Dive Atmospheric Charts (Humidity & Precipitation) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {isHistoryLoading && !history ? (
@@ -178,12 +222,18 @@ export default function WeatherDashboardPage() {
             <>
               <HumidityChart
                 observations={history?.observations || []}
+                hourlyForecast={weatherData?.hourly}
                 range={range}
+                forecastMode={analyticsTimelineMode}
+                onForecastModeChange={setAnalyticsTimelineMode}
               />
               <PrecipitationChart
                 observations={history?.observations || []}
+                hourlyForecast={weatherData?.hourly}
                 totalPrecipitation={history?.analytics.total_precipitation || 0}
                 range={range}
+                forecastMode={analyticsTimelineMode}
+                onForecastModeChange={setAnalyticsTimelineMode}
               />
             </>
           )}
@@ -200,14 +250,20 @@ export default function WeatherDashboardPage() {
             <>
               <WindAnalytics
                 observations={history?.observations || []}
+                hourlyForecast={weatherData?.hourly}
                 avgWindSpeed={history?.analytics.average_wind_speed || 0}
                 maxWindSpeed={history?.analytics.max_wind_speed || 0}
                 currentDirection={weatherData?.current.wind_direction}
                 range={range}
+                forecastMode={analyticsTimelineMode}
+                onForecastModeChange={setAnalyticsTimelineMode}
               />
               <WeatherConditionChart
                 distribution={history?.analytics.condition_distribution || []}
                 totalObservations={history?.analytics.observation_count || 0}
+                hourlyForecast={weatherData?.hourly}
+                forecastMode={analyticsTimelineMode}
+                onForecastModeChange={setAnalyticsTimelineMode}
               />
             </>
           )}

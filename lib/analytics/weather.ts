@@ -1,4 +1,4 @@
-import { WeatherObservation, WeatherAnalytics, WeatherConditionCount } from '@/types/weather';
+import { WeatherObservation, WeatherAnalytics, WeatherConditionCount, HourlyWeather } from '@/types/weather';
 import { getWeatherCategory } from '@/lib/weather/weather-codes';
 
 export function calculateAverageTemperature(observations: WeatherObservation[]): number {
@@ -62,6 +62,29 @@ export function calculateConditionDistribution(observations: WeatherObservation[
     percentage: Math.round((data.count / total) * 100),
     weather_code: data.sampleCode,
   })).sort((a, b) => b.count - a.count);
+}
+
+export function calculateForecastConditionDistribution(hourly: HourlyWeather[]): WeatherConditionCount[] {
+  if (hourly.length === 0) return [];
+
+  const counts: Record<string, { count: number; sampleCode: number }> = {};
+  for (const h of hourly) {
+    const category = getWeatherCategory(h.weather_code);
+    if (!counts[category]) {
+      counts[category] = { count: 0, sampleCode: h.weather_code };
+    }
+    counts[category].count += 1;
+  }
+
+  const total = hourly.length;
+  return Object.entries(counts)
+    .map(([condition, data]) => ({
+      condition,
+      count: data.count,
+      percentage: Math.round((data.count / total) * 100),
+      weather_code: data.sampleCode,
+    }))
+    .sort((a, b) => b.count - a.count);
 }
 
 export function computeWeatherAnalytics(
