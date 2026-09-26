@@ -7,9 +7,11 @@ interface UsePredictionOptions {
   locationId?: string | null;
   latitude?: number;
   longitude?: number;
+  city?: string | null;
+  country?: string | null;
 }
 
-export function usePrediction({ locationId, latitude, longitude }: UsePredictionOptions) {
+export function usePrediction({ locationId, latitude, longitude, city, country }: UsePredictionOptions) {
   const [data, setData] = useState<MLPredictionResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +25,8 @@ export function usePrediction({ locationId, latitude, longitude }: UsePrediction
       if (locationId) params.set('locationId', locationId);
       if (latitude !== undefined) params.set('lat', latitude.toString());
       if (longitude !== undefined) params.set('lon', longitude.toString());
+      if (city) params.set('city', city);
+      if (country) params.set('country', country);
 
       const res = await fetch(`/api/predictions?${params.toString()}`);
       if (!res.ok) {
@@ -38,7 +42,7 @@ export function usePrediction({ locationId, latitude, longitude }: UsePrediction
     } finally {
       setIsLoading(false);
     }
-  }, [locationId, latitude, longitude]);
+  }, [locationId, latitude, longitude, city, country]);
 
   useEffect(() => {
     fetchPrediction();

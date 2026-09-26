@@ -24,10 +24,12 @@ export async function GET(request: NextRequest) {
     const locationId = searchParams.get('locationId') || 'b1b51075-8025-4202-b054-e0eb29241511';
     const latParam = searchParams.get('lat');
     const lonParam = searchParams.get('lon');
+    const cityParam = searchParams.get('city');
+    const countryParam = searchParams.get('country');
 
-    // 1. Resolve Location Coordinates
-    let city = 'Pune';
-    let country = 'India';
+    // 1. Resolve Location Coordinates & Metadata
+    let city = cityParam?.trim() || 'Pune';
+    let country = countryParam?.trim() || 'India';
     let latitude = 18.5204;
     let longitude = 73.8567;
 
@@ -35,8 +37,8 @@ export async function GET(request: NextRequest) {
       latitude = parseFloat(latParam!);
       longitude = parseFloat(lonParam!);
     } else if (KNOWN_LOCATIONS[locationId]) {
-      city = KNOWN_LOCATIONS[locationId].city;
-      country = KNOWN_LOCATIONS[locationId].country;
+      if (!cityParam) city = KNOWN_LOCATIONS[locationId].city;
+      if (!countryParam) country = KNOWN_LOCATIONS[locationId].country;
       latitude = KNOWN_LOCATIONS[locationId].lat;
       longitude = KNOWN_LOCATIONS[locationId].lon;
     }
@@ -51,10 +53,10 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
 
         if (loc) {
-          city = loc.city;
-          country = loc.country;
-          latitude = loc.latitude;
-          longitude = loc.longitude;
+          if (!cityParam) city = loc.city;
+          if (!countryParam) country = loc.country;
+          if (!isValidLatitude(latParam)) latitude = loc.latitude;
+          if (!isValidLongitude(lonParam)) longitude = loc.longitude;
         }
       } catch {
         // Non-blocking

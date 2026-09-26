@@ -118,6 +118,18 @@ async function runEndpointTests() {
   assert(Array.isArray(data9.history), 'Prediction evaluation history array is present');
   console.log(`    ML Next-Hour Prediction: ${data9.prediction.temperature}°C, Rain: ${data9.prediction.rain_probability}%, Model: ${data9.model.type} ${data9.model.version}`);
 
+  // Test 10: GET /api/predictions (Other State/City - California)
+  console.log('\n[10] Testing GET /api/predictions (Other State/City - California)...');
+  const req10 = new NextRequest('http://localhost:3000/api/predictions?city=California&country=United%20States&lat=36.7783&lon=-119.4179');
+  const res10 = await predictionsGET(req10);
+  assert(res10.status === 200, `Expected 200 for other state prediction, got ${res10.status}`);
+  const data10 = await res10.json();
+  assert(data10.location.city === 'California', `Expected city California, got ${data10.location.city}`);
+  assert(data10.location.country === 'United States', `Expected country United States, got ${data10.location.country}`);
+  assert(typeof data10.prediction?.temperature === 'number', 'Other state predicted temperature is valid');
+  assert(typeof data10.prediction?.rain_probability === 'number', 'Other state predicted rain is valid');
+  console.log(`    California ML Prediction: ${data10.prediction.temperature}°C, Rain: ${data10.prediction.rain_probability}%, Location: ${data10.location.city}, ${data10.location.country}`);
+
   console.log('\n--- ALL ROUTE HANDLER TESTS PASSED SUCCESSFULLY ---');
 }
 

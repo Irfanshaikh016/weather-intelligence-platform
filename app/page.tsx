@@ -81,6 +81,8 @@ export default function WeatherDashboardPage() {
     locationId: selectedLocation?.id || null,
     latitude: selectedLocation?.latitude,
     longitude: selectedLocation?.longitude,
+    city: selectedLocation?.city,
+    country: selectedLocation?.country,
   });
 
   const [analyticsTimelineMode, setAnalyticsTimelineMode] = React.useState<'past' | 'forecast'>('past');

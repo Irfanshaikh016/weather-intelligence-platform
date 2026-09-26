@@ -64,7 +64,7 @@ export function NextHourPrediction({ predictionData, isLoading }: NextHourPredic
               </span>
             </div>
             <p className="text-xs text-neutral-400 mt-0.5">
-              Trained on historical telemetry for {location.city}, {location.country}
+              Real-time ML inference for {location.city}{location.country ? `, ${location.country}` : ''}
             </p>
           </div>
         </div>
