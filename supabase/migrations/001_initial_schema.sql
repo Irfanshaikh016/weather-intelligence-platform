@@ -114,5 +114,11 @@ VALUES
   ('Delhi', 'India', 'Delhi', 28.6139, 77.2090, 'Asia/Kolkata', true),
   ('Bengaluru', 'India', 'Karnataka', 12.9716, 77.5946, 'Asia/Kolkata', true),
   ('London', 'United Kingdom', 'Greater London', 51.5074, -0.1278, 'Europe/London', true),
-  ('New York', 'United States', 'New York', 40.7128, -74.0060, 'America/New_York', true)
+  ('New York', 'United States', 'New York', 40.7128, -74.0060, 'America/New_York', true),
+  ('Tokyo', 'Japan', 'Kanto', 35.6762, 139.6503, 'Asia/Tokyo', true),
+  ('Paris', 'France', 'Île-de-France', 48.8566, 2.3522, 'Europe/Paris', true),
+  ('Dubai', 'United Arab Emirates', 'Dubai', 25.2048, 55.2708, 'Asia/Dubai', true),
+  ('Singapore', 'Singapore', 'Central', 1.3521, 103.8198, 'Asia/Singapore', true),
+  ('Sydney', 'Australia', 'New South Wales', -33.8688, 151.2093, 'Australia/Sydney', true),
+  ('San Francisco', 'United States', 'California', 37.7749, -122.4194, 'America/Los_Angeles', true)
 ON CONFLICT (latitude, longitude) DO NOTHING;

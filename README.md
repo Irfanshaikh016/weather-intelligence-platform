@@ -79,31 +79,50 @@ The platform is designed exclusively for the **Vercel serverless ecosystem and S
 - **Primary Target**: Next-hour temperature ($T + 1\text{ hour}$).
 - **Secondary Target**: Next-hour rain probability ($T + 1\text{ hour}$).
 
-### 3.2 Feature Engineering (32 Time-Series Features)
-Features are constructed strictly using observations up to time $T$ (zero data leakage):
-- **Atmospheric State**: Temperature, feels like, relative humidity, pressure, wind velocity, wind direction, precipitation, cloud cover, visibility, UV index, weather code.
-- **Time & Cyclical Encodings**: Hour of day, day of week, day of year, month, is_day, `hour_sin`, `hour_cos`.
-- **Historical Lags**: $T-1\text{h}$, $T-2\text{h}$, $T-3\text{h}$, $T-6\text{h}$ for temperature, humidity, wind, and precipitation.
-- **Rolling Windows**: 3-hour, 6-hour, and 12-hour rolling averages and cumulative precipitation sums.
+### 3.2 Training Data & Testing Data Specifications
 
-### 3.3 Chronological Splitting & Model Benchmarking
-Trained on **2,173 real hourly observations** chronologically partitioned (70% Train, 15% Validation, 15% Test):
+The machine learning models are trained and evaluated using genuine, high-resolution hourly meteorological telemetry:
+
+| Dataset Partition | Proportion | Observations | Temporal Order | Primary Purpose |
+| :--- | :---: | :---: | :--- | :--- |
+| **Training Data (`X_train`, `y_train`)** | **70%** | **1,521** | Earliest 70% of chronological intervals | Fitting model coefficients, decision trees, feature scalers (mean, std), and baseline weights |
+| **Validation Data (`X_val`, `y_val`)** | **15%** | **326** | Intermediate 15% interval block | Hyperparameter tuning (tree depth, regularization), threshold calibration, and lag order verification |
+| **Testing Data (`X_test`, `y_test`)** | **15%** | **326** | Most recent 15% hold-out intervals | Strict, unbiased out-of-sample evaluation against ground truth; benchmark reporting (MAE, RMSE, $R^2$, F1) |
+| **Total Ingested Telemetry** | **100%** | **2,173** | Continuous 1-Hour Resolution | Cached at `ml/data/weather_dataset.csv` |
+
+#### Data Provenance & Integrity Guidelines:
+- **Telemetry Source**: Open-Meteo High-Resolution Historical Archive & Reanalysis API (`past_days=90`).
+- **Observed Meteorological Variables**: 2m Temperature (°C), Apparent Feels-Like Temperature (°C), Relative Humidity (%), Surface Atmospheric Pressure (hPa), 10m Wind Speed (km/h), Wind Direction (°), Precipitation Volume (mm), Cloud Cover (%), Visibility (km), Solar UV Index, WMO Weather Code, Day/Night Indicator.
+- **Zero Future-Data Leakage**: Standard random train/test splits severely contaminate time-series weather models by interpolating between known future points. Our pipeline employs **strict chronological splitting** (`chronological_split()`), ensuring the testing dataset occurs strictly after the training and validation horizons.
+- **Quality Control**: Sensor gap detection with forward-fill (`ffill`) and backward-fill (`bfill`) imputation, validating a minimum dataset threshold of $\ge 500$ verified records (enforcing 2,173 real observations).
+
+### 3.3 Feature Engineering (32 Time-Series Features)
+Features are constructed strictly using observations up to time $T$ (zero data leakage):
+- **Atmospheric State (11 features)**: Temperature, feels like, relative humidity, pressure, wind velocity, wind direction, precipitation, cloud cover, visibility, UV index, weather code.
+- **Time & Cyclical Encodings (7 features)**: Hour of day, day of week, day of year, month, is_day, `hour_sin`, `hour_cos`.
+- **Historical Lags (8 features)**: $T-1\text{h}$, $T-2\text{h}$, $T-3\text{h}$, $T-6\text{h}$ for temperature, humidity, wind, and precipitation.
+- **Rolling Windows (6 features)**: 3-hour, 6-hour, and 12-hour rolling averages and cumulative precipitation sums.
+
+### 3.4 Model Benchmarking on Unseen Testing Data (326 Hold-out Samples)
 
 #### Next-Hour Temperature Regressors ($T + 1\text{h}$)
+Evaluated on the 326 hold-out testing observations:
 | Model Candidate | Test MAE | Test RMSE | Test $R^2$ | Status |
 | :--- | :---: | :---: | :---: | :---: |
 | **Persistence Baseline** ($y_{T+1} = y_T$) | 0.6917°C | 0.9692°C | 0.8482 | Benchmark Baseline |
-| **Linear Regression** | **0.5696°C** | **0.7804°C** | **0.9016** | **Selected Best Model** |
+| **Linear Regression** | **0.5696°C** | **0.7804°C** | **0.9016** | **Selected Best Model (17.6% error reduction)** |
 | **Random Forest Regressor** | 0.6071°C | 0.9884°C | 0.8422 | Evaluated Candidate |
 
 #### Next-Hour Rain Probability Classifiers ($T + 1\text{h}$)
+Evaluated on the 326 hold-out testing observations:
 | Model Candidate | Test Accuracy | Precision | Recall | Test F1 Score |
 | :--- | :---: | :---: | :---: | :---: |
 | **Persistence Baseline** | 0.8708 | 0.7375 | 0.7375 | **0.7375** |
 | **Logistic Regression** | 0.7262 | 0.4710 | 0.9125 | 0.6213 |
 | **Random Forest Classifier** | 0.8000 | 0.6744 | 0.3625 | 0.4715 |
 
-### 3.4 Top Predictive Contributors
+### 3.5 Top Predictive Contributors
+Feature importance calculated on training data and verified on testing telemetry:
 1. Baseline Temperature (67.6%)
 2. Solar UV Index (17.2%)
 3. Apparent Temperature (2.9%)
@@ -149,7 +168,7 @@ Execute the migrations in order in your Supabase SQL Editor:
 2. `supabase/migrations/002_ml_predictions_schema.sql` (Model Registry, Predictions)
 
 ### Core Tables:
-- `locations`: Monitored geographic stations (Pune, Mumbai, Delhi, Bengaluru, London, New York).
+- `locations`: Monitored geographic stations (Pune, Mumbai, Delhi, Bengaluru, London, New York, Tokyo, Paris, Dubai, Singapore, Sydney, San Francisco).
 - `weather_observations`: Immutable time-series weather records with unique constraint on `(location_id, recorded_at)`.
 - `ml_model_versions`: Registry tracking versioned ML models, active flags, and test metrics (MAE, RMSE, $R^2$, F1).
 - `weather_predictions`: Historical predictions with target timestamps, predictions, and ground-truth verification errors.
@@ -197,13 +216,16 @@ Visit `http://localhost:3000` to interact with the platform.
 ### 8.2 Machine Learning Pipeline (Python)
 
 ```bash
-# Train Next-Hour Temperature Model
+# 1. Fetch & inspect the continuous hourly dataset (2,173 observations)
+python -c "from ml.utils.dataset import load_or_fetch_dataset; df = load_or_fetch_dataset(); print('Ingested observations:', len(df))"
+
+# 2. Train Next-Hour Temperature Model on Training Data (70%) & evaluate on Testing Data (15%)
 python ml/training/train_temperature.py
 
-# Train Next-Hour Rain Probability Model
+# 3. Train Next-Hour Rain Probability Model on Training Data (70%) & evaluate on Testing Data (15%)
 python ml/training/train_rain.py
 
-# Run Model Evaluation & Verification
+# 4. Run Independent Evaluation & Residual Verification on Hold-Out Testing Data
 python ml/evaluation/evaluate_temperature.py
 python ml/evaluation/evaluate_rain.py
 ```

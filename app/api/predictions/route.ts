@@ -16,6 +16,12 @@ const KNOWN_LOCATIONS: Record<string, { city: string; country: string; lat: numb
   'b1b51075-8025-4202-b054-e0eb29241514': { city: 'Bengaluru', country: 'India', lat: 12.9716, lon: 77.5946 },
   'b1b51075-8025-4202-b054-e0eb29241515': { city: 'London', country: 'United Kingdom', lat: 51.5074, lon: -0.1278 },
   'b1b51075-8025-4202-b054-e0eb29241516': { city: 'New York', country: 'United States', lat: 40.7128, lon: -74.0060 },
+  'b1b51075-8025-4202-b054-e0eb29241517': { city: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503 },
+  'b1b51075-8025-4202-b054-e0eb29241518': { city: 'Paris', country: 'France', lat: 48.8566, lon: 2.3522 },
+  'b1b51075-8025-4202-b054-e0eb29241519': { city: 'Dubai', country: 'United Arab Emirates', lat: 25.2048, lon: 55.2708 },
+  'b1b51075-8025-4202-b054-e0eb29241520': { city: 'Singapore', country: 'Singapore', lat: 1.3521, lon: 103.8198 },
+  'b1b51075-8025-4202-b054-e0eb29241521': { city: 'Sydney', country: 'Australia', lat: -33.8688, lon: 151.2093 },
+  'b1b51075-8025-4202-b054-e0eb29241522': { city: 'San Francisco', country: 'United States', lat: 37.7749, lon: -122.4194 },
 };
 
 export async function GET(request: NextRequest) {
