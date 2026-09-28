@@ -69,7 +69,7 @@ The platform is designed exclusively for the **Vercel serverless ecosystem and S
                          └─────────────────────────┘
 ```
 
-> **Architectural Constraint & Security**: The browser never writes directly to Supabase. Observation collection and model version registration execute exclusively via authenticated server-side Route Handlers. Training is decoupled from inference: models are trained offline using Python, then exported to optimized mathematical parameters for zero-latency serverless execution on Vercel.
+> **Architectural Constraint & Security**: The browser never writes directly to Supabase. Observation collection and model version registration execute exclusively via authenticated server-side Route Handlers. Training is decoupled from inference: models are trained offline using Python, then exported to optimized mathematical parameters for zero-latency serverless execution on Vercel .
 
 ---
 
